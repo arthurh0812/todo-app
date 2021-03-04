@@ -1,0 +1,32 @@
+{
+  "1": {
+    "id": 1,
+    "description": "The first todo item",
+    "done": false,
+    "author": {
+      "ID": 3,
+      "name": "Hagrid",
+      "email": "hhagrid@hogwarts.com"
+    }
+  },
+  "2": {
+    "id": 2,
+    "description": "Brush your teeth",
+    "done": true,
+    "author": {
+      "ID": 2,
+      "name": "Monchi",
+      "email": "monty.and.early@gmail.com"
+    }
+  },
+  "3": {
+    "id": 3,
+    "description": "Nice habit",
+    "done": false,
+    "author": {
+      "ID": 5,
+      "name": "Lara",
+      "email": "randomtest@web.de"
+    }
+  }
+}

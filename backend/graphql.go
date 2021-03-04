@@ -3,124 +3,128 @@ package main
 import (
 	"errors"
 	"github.com/graphql-go/graphql"
+	"log"
 )
 
-var ErrUserIDDoesNotExist = errors.New("querying user: error: the ID argument could not be found in the database")
+var ErrItemIDDoesNotExist = errors.New("querying item: error: the ID argument could not be found in the database")
 
-var ErrDroidModelDoesNotExist = errors.New("querying droid: error: the model argument could not be found in the database")
+var ErrItemIDArgumentNotSpecified = errors.New("reading query: error: no ID argument was specified")
+
+var ErrInputItemNotSpecified = errors.New("reading mutation: error: no input item was specified")
+
+var ErrInputItemIncomplete = errors.New("reading input item: error: the input item lacks some fields")
 
 // GraphQLRequest with three components: "query", "operation" and "variables"
 type GraphQLRequest struct {
 	Query string `json:"query"`
-	Operation string `json:"operation"`
+	Mutation string `json:"mutation"`
+
 	Variables map[string]interface{} `json:"variables"`
 }
 
-var StringField = func() *graphql.Field {
-	return &graphql.Field{
-		Type: graphql.String,
-	}
-}
-
-var episodeType = graphql.NewEnum(graphql.EnumConfig{
-	Name: "Episode",
-	Values: graphql.EnumValueConfigMap{
-		"JEDI": &graphql.EnumValueConfig{
-			Value: EpisodeJedi,
-		},
-		"EMPIRE": &graphql.EnumValueConfig{
-			Value: EpisodeEmpire,
-		},
-		"NEW_HOPE": &graphql.EnumValueConfig{
-			Value: EpisodeNewHope,
-		},
-	},
-})
-
-var modelType = graphql.NewEnum(graphql.EnumConfig{
-	Name: "Model",
-	Values: graphql.EnumValueConfigMap{
-		"C3-PO": &graphql.EnumValueConfig{
-			Value: DroidModelC3PO,
-		},
-		"R2-D2": &graphql.EnumValueConfig{
-			Value: DroidModelR2D2,
-		},
-	},
-})
-
-var droidType = graphql.NewObject(graphql.ObjectConfig{
-	Name: "Droid",
-	Fields: graphql.Fields{
-		"name": StringField(),
-		"model": &graphql.Field{
-			Type: modelType,
-		},
-	},
-})
-
-var userType = graphql.NewObject(graphql.ObjectConfig{
+var graphqlUser = graphql.NewObject(graphql.ObjectConfig{
 	Name: "User",
 	Fields: graphql.Fields{
-		"id": &graphql.Field{
-			Type: graphql.Int,
+		"name": &graphql.Field{
+			Type: graphql.String,
 		},
-		"name": StringField(),
-		"age": &graphql.Field{
-			Type: graphql.Int,
+		"email": &graphql.Field{
+			Type: graphql.String,
 		},
-		"episode": &graphql.Field{
-			Type: episodeType,
+		"birthDate": &graphql.Field{
+			Type: graphql.Int,
 		},
 	},
 })
 
-var queryType = graphql.NewObject(graphql.ObjectConfig{
-	Name: "Query",
+var itemInputType = graphql.NewInputObject(graphql.InputObjectConfig{
+	Name: "ItemInput",
 	Fields: graphql.Fields{
-		"user": &graphql.Field{
-			Type: userType,
+		"description": &graphql.Field{
+			Type: graphql.String,
+		},
+		"authorID": &graphql.Field{
+			Type: graphql.Int,
+		},
+	},
+})
+
+var itemType = graphql.NewObject(graphql.ObjectConfig{
+	Name: "Item",
+	Fields: graphql.Fields{
+		"description": &graphql.Field{
+			Type: graphql.String,
+		},
+		"done": &graphql.Field{
+			Type: graphql.Boolean,
+		},
+		"author": &graphql.Field{
+			Type: graphqlUser,
+		},
+	},
+})
+
+var itemQuery = graphql.NewObject(graphql.ObjectConfig{
+	Name: "ItemQuery",
+	Fields: graphql.Fields{
+		"item": &graphql.Field{
+			Type: itemType,
 			Args: graphql.FieldConfigArgument{
 				"id": &graphql.ArgumentConfig{
-					Type: graphql.String,
-					DefaultValue: "1",
+					Type: graphql.Int,
+					DefaultValue: -1,
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				id, ok := p.Args["id"].(string)
+				id, ok := p.Args["id"]
 				if !ok {
-					return nil, ErrUserIDDoesNotExist
+					return nil, ErrItemIDArgumentNotSpecified
 				}
-				user := getUserByID(id)
-				if user == nil {
-					return nil, ErrUserIDDoesNotExist
-				}
-				return user, nil
-			},
-		},
-		"droid": &graphql.Field{
-			Type: droidType,
-			Args: graphql.FieldConfigArgument{
-				"model": &graphql.ArgumentConfig{
-					Type: modelType,
-					DefaultValue: "C3-PO",
-				},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				model, ok := p.Args["model"]
-				if !ok {
-					return nil, ErrDroidModelDoesNotExist
-				}
-				droidModel := DroidModel(model.(string))
-				if droid := getDroidByModel(droidModel); droid != nil {
-					return droid, nil
-				}
-				return nil, ErrDroidModelDoesNotExist
+				return resolveItemID(id.(int))
 			},
 		},
 	},
 })
 
-var schema, _ = graphql.NewSchema(graphql.SchemaConfig{
-	Query: queryType,
+var itemMutation = graphql.NewObject(graphql.ObjectConfig{
+	Name: "ItemMutation",
+	Fields: graphql.Fields{
+		"createItem": &graphql.Field{
+			Type: itemType,
+			Args: graphql.FieldConfigArgument{
+				"item": &graphql.ArgumentConfig{
+					Type: graphql.NewNonNull(itemInputType),
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				item, ok := p.Args["item"]
+				if !ok {
+					return nil, ErrInputItemNotSpecified
+				}
+				log.Printf("%T", item)
+				return resolveItem(item)
+			},
+		},
+	},
+})
+
+func resolveItemID(id int) (interface{}, error) {
+	item := getItemByID(id)
+	if item == nil {
+		return nil, ErrItemIDDoesNotExist
+	}
+	return item, nil
+}
+
+func resolveItem(item interface{}) (interface{}, error){
+	return nil, errors.New("temporary error")
+	//return createItem(description., authorID.(int)), nil
+}
+
+var itemSchema, _ = graphql.NewSchema(graphql.SchemaConfig{
+	Query: itemQuery,
+	Mutation: itemMutation,
+	Types: []graphql.Type{
+		itemInputType,
+	},
 })

@@ -7,13 +7,11 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"github.com/arthurh0812/framework"
 	"github.com/arthurh0812/framework/context"
+	"github.com/graphql-go/graphql"
 	"google.golang.org/api/option"
 	"log"
 	"net/http"
 	"os"
-	"time"
-
-	"github.com/graphql-go/graphql"
 )
 
 var store *firestore.Client
@@ -53,19 +51,6 @@ func executeRequest(r GraphQLRequest, schema graphql.Schema, ctx goContext.Conte
 func main() {
 	app := framework.New()
 	defer store.Close()
-
-	miller := &User{
-		FirstName: "Mike",
-		LastName: "Miller",
-		BirthDate: time.Now().Add(-20 * 365 * 24 * time.Hour),
-		Email: "mike.miller@web.de",
-		ID: "hello",
-	}
-
-	_, err := store.Collection("users").Doc("0").Set(goContext.Background(), miller)
-	if err != nil {
-		log.Fatalf("failed to write data to firestore: %v", err)
-	}
 
 	app.Register(http.MethodGet, "/hello", func(ctx *context.Context) {
 		d := context.NewDirector(ctx)
@@ -113,7 +98,7 @@ func main() {
 		}
 	})
 
-	err = app.Build()
+	err := app.Build()
 	if err != nil {
 		log.Fatal(err)
 	}

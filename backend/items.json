@@ -4,7 +4,7 @@
     "description": "The first todo item",
     "done": false,
     "author": {
-      "ID": 3,
+      "ID": "",
       "name": "Hagrid",
       "email": "hhagrid@hogwarts.com"
     }

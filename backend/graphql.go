@@ -14,11 +14,9 @@ var ErrInputItemNotSpecified = errors.New("reading mutation: error: no input ite
 
 var ErrInputItemIncomplete = errors.New("reading input item: error: the input item lacks some fields")
 
-// GraphQLRequest with three components: "query", "operation" and "variables"
+// GraphQLRequest with its two components: "query" and "variables"
 type GraphQLRequest struct {
 	Query string `json:"query"`
-	Mutation string `json:"mutation"`
-
 	Variables map[string]interface{} `json:"variables"`
 }
 
@@ -123,8 +121,5 @@ func resolveItem(item interface{}) (interface{}, error){
 
 var itemSchema, _ = graphql.NewSchema(graphql.SchemaConfig{
 	Query: itemQuery,
-	Mutation: itemMutation,
-	Types: []graphql.Type{
-		itemInputType,
-	},
 })
+
